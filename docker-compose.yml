@@ -16,5 +16,23 @@ services:
       timeout: 5s
       retries: 5
 
+  app:
+    build: .
+    container_name: flux-app
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://flux_user:flux_password@postgres:5432/flux
+      - GROQ_API_KEY=your-groq-api-key-here
+      - NEXTAUTH_SECRET=your-nextauth-secret
+      - NEXTAUTH_URL=http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: sh -c "npx prisma db push && npm run dev"
+
 volumes:
   postgres_data:

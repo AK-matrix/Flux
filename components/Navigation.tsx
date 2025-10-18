@@ -8,7 +8,8 @@ import {
   PlusIcon,
   UserGroupIcon,
   CogIcon,
-  UserIcon
+  UserIcon,
+  ChatBubbleLeftIcon
 } from '@heroicons/react/24/outline'
 import { useAuth } from '../hooks/useAuth'
 
@@ -17,6 +18,7 @@ const navItems = [
   { name: 'Trending', href: '/trending', icon: FireIcon },
   { name: 'Create', href: '/create', icon: PlusIcon },
   { name: 'Communities', href: '/communities', icon: UserGroupIcon },
+  { name: 'Messages', href: '/dms', icon: ChatBubbleLeftIcon },
   { name: 'Settings', href: '/settings', icon: CogIcon },
 ]
 

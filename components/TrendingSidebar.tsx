@@ -17,10 +17,16 @@ interface QuickAction {
 export default function TrendingSidebar() {
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([])
   const [nearbyPosts, setNearbyPosts] = useState<any[]>([])
+  const [stats, setStats] = useState({
+    activePosts: 0,
+    communities: 0,
+    onlineUsers: 0
+  })
 
   useEffect(() => {
     fetchTrendingTopics()
     fetchNearbyPosts()
+    fetchStats()
   }, [])
 
   const fetchTrendingTopics = async () => {
@@ -57,6 +63,37 @@ export default function TrendingSidebar() {
       }
     } catch (error) {
       console.error('Failed to fetch nearby posts:', error)
+    }
+  }
+
+  const fetchStats = async () => {
+    try {
+      const [postsResponse, communitiesResponse] = await Promise.all([
+        fetch('/api/posts'),
+        fetch('/api/communities')
+      ])
+      
+      if (postsResponse.ok && communitiesResponse.ok) {
+        const [postsData, communitiesData] = await Promise.all([
+          postsResponse.json(),
+          communitiesResponse.json()
+        ])
+        
+        // Count unique users from posts and communities
+        const uniqueUsers = new Set()
+        postsData.posts.forEach((post: any) => uniqueUsers.add(post.author.id))
+        communitiesData.communities.forEach((community: any) => {
+          community.members.forEach((member: any) => uniqueUsers.add(member.id))
+        })
+        
+        setStats({
+          activePosts: postsData.posts.length,
+          communities: communitiesData.communities.length,
+          onlineUsers: uniqueUsers.size || 1 // At least 1 (current user)
+        })
+      }
+    } catch (error) {
+      console.error('Failed to fetch stats:', error)
     }
   }
 
@@ -183,15 +220,15 @@ export default function TrendingSidebar() {
         <div className="space-y-3">
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-300">Active Posts</span>
-            <span className="text-sm font-medium text-white">24</span>
+            <span className="text-sm font-medium text-white">{stats.activePosts}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-300">Communities</span>
-            <span className="text-sm font-medium text-white">8</span>
+            <span className="text-sm font-medium text-white">{stats.communities}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-300">Online Now</span>
-            <span className="text-sm font-medium text-green-400">156</span>
+            <span className="text-sm font-medium text-green-400">{stats.onlineUsers}</span>
           </div>
         </div>
       </motion.div>

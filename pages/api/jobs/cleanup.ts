@@ -28,9 +28,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         where: { id: community.id }
       })
 
-      if (community.post.isEphemeral) {
+      if (community.post?.isEphemeral) {
         await prisma.post.delete({
-          where: { id: community.post.id }
+          where: { id: community.post?.id }
         })
       }
     }

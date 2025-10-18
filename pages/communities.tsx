@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import { motion } from 'framer-motion'
 import Layout from '../components/Layout'
 import { useAuth } from '../hooks/useAuth'
@@ -40,6 +41,7 @@ interface Community {
 }
 
 export default function CommunitiesPage() {
+  const router = useRouter()
   const { user } = useAuth()
   const [communities, setCommunities] = useState<Community[]>([])
   const [loading, setLoading] = useState(true)
@@ -52,30 +54,16 @@ export default function CommunitiesPage() {
   const fetchCommunities = async () => {
     try {
       setLoading(true)
-      // For now, we'll fetch all posts and filter for those with communities
-      const response = await fetch('/api/posts')
+      const headers: HeadersInit = {}
+      const token = localStorage.getItem('flux_token') || 'mock-token'
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`
+      }
+      
+      const response = await fetch('/api/communities', { headers })
       if (response.ok) {
         const data = await response.json()
-        const postsWithCommunities = data.posts.filter((post: any) => post.community)
-        setCommunities(postsWithCommunities.map((post: any) => ({
-          id: post.community.id,
-          post: {
-            id: post.id,
-            title: post.title,
-            description: post.description,
-            category: post.category,
-            urgency: post.urgency,
-            isEphemeral: post.isEphemeral,
-            ttlHours: post.ttlHours,
-            createdAt: post.createdAt,
-            author: post.author
-          },
-          maxMembers: post.community.maxMembers,
-          members: post.community.members,
-          createdAt: post.community.createdAt,
-          ttlHours: post.community.ttlHours,
-          isActive: post.community.isActive
-        })))
+        setCommunities(data.communities)
       }
     } catch (error) {
       console.error('Failed to fetch communities:', error)
@@ -86,27 +74,48 @@ export default function CommunitiesPage() {
 
   const handleJoinCommunity = async (communityId: string) => {
     try {
+      const token = localStorage.getItem('flux_token') || 'mock-token'
+      console.log('Joining community:', communityId, 'with token:', token)
       const response = await fetch(`/api/communities/${communityId}/join`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       })
       if (response.ok) {
+        console.log('Successfully joined community')
         fetchCommunities()
+        alert('Successfully joined community!')
+      } else {
+        const error = await response.json()
+        console.error('Join community error:', error)
+        alert(error.error || 'Failed to join community')
       }
     } catch (error) {
       console.error('Failed to join community:', error)
+      alert('Failed to join community')
     }
   }
 
   const handleLeaveCommunity = async (communityId: string) => {
     try {
+      const token = localStorage.getItem('flux_token') || 'mock-token'
       const response = await fetch(`/api/communities/${communityId}/leave`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       })
       if (response.ok) {
         fetchCommunities()
+        alert('Successfully left community!')
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to leave community')
       }
     } catch (error) {
       console.error('Failed to leave community:', error)
+      alert('Failed to leave community')
     }
   }
 
@@ -126,7 +135,10 @@ export default function CommunitiesPage() {
   }
 
   const isMember = (community: Community) => {
-    return user ? community.members.some(member => member.id === user.id) : false
+    if (!user) return false
+    const isUserMember = community.members.some(member => member.id === user.id)
+    console.log('Checking membership:', { userId: user.id, members: community.members.map(m => m.id), isMember: isUserMember })
+    return isUserMember
   }
 
   const isFull = (community: Community) => {
@@ -290,12 +302,20 @@ export default function CommunitiesPage() {
                   {/* Actions */}
                   <div className="flex space-x-2">
                     {isMember(community) ? (
-                      <button
-                        onClick={() => handleLeaveCommunity(community.id)}
-                        className="flex-1 px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors text-sm"
-                      >
-                        Leave
-                      </button>
+                      <>
+                        <button
+                          onClick={() => router.push(`/communities/${community.id}/chat`)}
+                          className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm"
+                        >
+                          Chat
+                        </button>
+                        <button
+                          onClick={() => handleLeaveCommunity(community.id)}
+                          className="flex-1 px-4 py-2 bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors text-sm"
+                        >
+                          Leave
+                        </button>
+                      </>
                     ) : (
                       <button
                         onClick={() => handleJoinCommunity(community.id)}

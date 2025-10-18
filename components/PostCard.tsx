@@ -93,6 +93,36 @@ export default function PostCard({
     }
   }
 
+  const handleStartDM = async () => {
+    if (!user) return
+    
+    try {
+      const response = await fetch('/api/dms/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('flux_token') || 'mock-token'}`
+        },
+        body: JSON.stringify({
+          receiverId: post.author.id,
+          postId: post.id
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        // Redirect to DM chat
+        window.location.href = `/dms/${data.dm.id}/chat`
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to start DM')
+      }
+    } catch (error) {
+      console.error('Failed to start DM:', error)
+      alert('Failed to start DM')
+    }
+  }
+
   const getUrgencyColor = (urgency: string) => {
     switch (urgency) {
       case 'Instant': return 'text-red-400 bg-red-500/20'
@@ -294,6 +324,18 @@ export default function PostCard({
             <ChatBubbleLeftIcon className="w-4 h-4" />
             <span className="text-sm">{post.comments.length}</span>
           </div>
+
+          {user && user.id !== post.author.id && (
+            <button
+              onClick={handleStartDM}
+              className="flex items-center space-x-1 px-3 py-1 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <span className="text-sm">DM</span>
+            </button>
+          )}
         </div>
 
         <div className="text-xs text-gray-500">

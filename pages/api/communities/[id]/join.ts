@@ -27,7 +27,7 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       return res.status(404).json({ error: 'Community not found' })
     }
 
-    if (community.post.isCompleted) {
+    if (community.post?.isCompleted) {
       return res.status(400).json({ error: 'Community is completed' })
     }
 

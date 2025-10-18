@@ -79,7 +79,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.log('🔐 Attempting login for:', email)
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       console.log('✅ Login successful:', userCredential.user.uid)
-      const token = await userCredential.user.getIdToken()
+      
+      // Generate a unique token for this user
+      const uniqueToken = `user-${userCredential.user.uid}`
+      
+      // Store the token in localStorage for API calls
+      localStorage.setItem('flux_token', uniqueToken)
       
       // The onAuthStateChanged will handle setting the user state
       router.push('/')
@@ -91,7 +96,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
+      // Clear all stored data
+      localStorage.removeItem('flux_token')
+      localStorage.clear()
+      
+      // Sign out from Firebase
       await signOut(auth)
+      
+      // Clear user state
+      setUser(null)
+      
       router.push('/auth/login')
     } catch (error) {
       console.error('Logout error:', error)

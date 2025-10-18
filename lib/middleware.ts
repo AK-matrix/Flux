@@ -25,36 +25,72 @@ export function withAuth(handler: (req: AuthenticatedRequest, res: NextApiRespon
         return res.status(401).json({ error: 'Authentication required' })
       }
 
-      // For development, create a user in the database if they don't exist
-      // This simulates the registration flow
-      let user = await prisma.user.findFirst({
-        where: { email: 'test@example.com' }
-      })
-
-      if (!user) {
-        // Create a test user for development
-        user = await prisma.user.create({
-          data: {
-            id: 'test-user-id',
-            email: 'test@example.com',
-            displayName: 'Test User',
-            anonymousCode: 'FLX-TEST',
-            emailVerified: true,
-            interests: ['Technology', 'Social'],
-            year: '2024',
-            major: 'Computer Science',
-            creditScore: 85,
-            isAnonymous: false
-          }
+      // Use Firebase UID directly for proper user isolation
+      if (token === 'mock-token') {
+        // Fallback for development
+        let user = await prisma.user.findFirst({
+          where: { email: 'test@example.com' }
         })
-      }
 
-      req.user = {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-        anonymousCode: user.anonymousCode,
-        creditScore: user.creditScore
+        if (!user) {
+          user = await prisma.user.create({
+            data: {
+              id: 'test-user-id',
+              email: 'test@example.com',
+              displayName: 'Test User',
+              anonymousCode: 'FLX-TEST',
+              emailVerified: true,
+              interests: ['Technology', 'Social'],
+              year: '2024',
+              major: 'Computer Science',
+              creditScore: 85,
+              isAnonymous: false
+            }
+          })
+        }
+
+        req.user = {
+          id: user.id,
+          email: user.email,
+          displayName: user.displayName || undefined,
+          anonymousCode: user.anonymousCode || undefined,
+          creditScore: user.creditScore
+        }
+      } else {
+        // Extract Firebase UID from token
+        const firebaseUid = token.replace('user-', '')
+        
+        // Find or create user with Firebase UID
+        let user = await prisma.user.findUnique({
+          where: { id: firebaseUid }
+        })
+
+        if (!user) {
+          // Create a new user for this Firebase UID
+          const userNumber = Math.floor(Math.random() * 10000)
+          user = await prisma.user.create({
+            data: {
+              id: firebaseUid, // Use Firebase UID directly
+              email: `user${userNumber}@example.com`,
+              displayName: `User ${userNumber}`,
+              anonymousCode: `FLX-${userNumber.toString().padStart(4, '0')}`,
+              emailVerified: true,
+              interests: ['Technology', 'Social'],
+              year: '2024',
+              major: 'Computer Science',
+              creditScore: Math.floor(Math.random() * 40) + 60, // 60-100
+              isAnonymous: false
+            }
+          })
+        }
+
+        req.user = {
+          id: user.id,
+          email: user.email,
+          displayName: user.displayName || undefined,
+          anonymousCode: user.anonymousCode || undefined,
+          creditScore: user.creditScore
+        }
       }
       
       return handler(req, res)

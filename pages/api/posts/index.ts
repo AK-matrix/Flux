@@ -51,10 +51,18 @@ async function handler(req: AuthenticatedRequest, res: NextApiResponse) {
       })
 
       // Calculate trending scores
-      const postsWithTrending = posts.map(post => ({
-        ...post,
-        trendingScore: calculateTrendingScore(post)
-      }))
+      const postsWithTrending = posts.map(post => {
+        const ageHours = (Date.now() - new Date(post.createdAt).getTime()) / (1000 * 60 * 60)
+        return {
+          ...post,
+          trendingScore: calculateTrendingScore(
+            post.upvotes,
+            post.comments.length,
+            ageHours,
+            post.urgency
+          )
+        }
+      })
 
       return res.status(200).json({ posts: postsWithTrending })
     } catch (error) {

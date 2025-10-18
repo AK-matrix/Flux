@@ -28,6 +28,13 @@ model User {
   reportsMade    Report[] @relation("Reporter")
   reportsAgainst Report[] @relation("Reported")
   communities    Community[] @relation("Members")
+  communityAdmins Community[] @relation("CommunityAdmins")
+  messages       Message[]
+  reactions      Reaction[]
+  goals          Goal[]
+  meetings       Meeting[]
+  dmsSent        DirectMessage[] @relation("DMSent")
+  dmsReceived    DirectMessage[] @relation("DMReceived")
 }
 
 model Post {
@@ -53,6 +60,11 @@ model Post {
   community      Community?
   isCompleted    Boolean  @default(false)
   reports        Report[]
+  
+  // New features
+  minCreditScore Float?   // Minimum credit score to DM
+  requireRealName Boolean @default(false) // Force non-anonymity for DMs
+  dms            DirectMessage[]
 }
 
 model Comment {
@@ -70,13 +82,95 @@ model Comment {
 
 model Community {
   id         String   @id @default(cuid())
-  postId     String   @unique
-  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId     String?  @unique
+  post       Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
   members    User[]   @relation("Members")
   maxMembers Int?
   createdAt  DateTime @default(now())
   ttlHours   Int
   isActive   Boolean  @default(true)
+  
+  // New features
+  admins     User[]   @relation("CommunityAdmins")
+  messages   Message[]
+  goals      Goal[]
+  meetings   Meeting[]
+  settings   Json?    // Community settings like anonymity requirements
+  dms        DirectMessage[] // DMs that use this community
+}
+
+model Message {
+  id          String   @id @default(cuid())
+  communityId String?
+  community   Community? @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  dmId        String?
+  dm          DirectMessage? @relation(fields: [dmId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content     String
+  isAnonymous Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  reactions   Reaction[]
+  replies     Message[] @relation("MessageReplies")
+  parentId    String?
+  parent      Message? @relation("MessageReplies", fields: [parentId], references: [id])
+}
+
+model DirectMessage {
+  id          String   @id @default(cuid())
+  senderId    String
+  sender      User     @relation("DMSent", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    User     @relation("DMReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+  postId      String?
+  post        Post?    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  communityId String?
+  community   Community? @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  messages    Message[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isActive    Boolean  @default(true)
+}
+
+model Reaction {
+  id        String   @id @default(cuid())
+  messageId String
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emoji     String
+  createdAt DateTime @default(now())
+}
+
+model Goal {
+  id          String   @id @default(cuid())
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  status      String   @default("active") // active, completed, cancelled
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdBy   String
+  creator     User     @relation(fields: [createdBy], references: [id])
+}
+
+model Meeting {
+  id          String   @id @default(cuid())
+  communityId String
+  community   Community @relation(fields: [communityId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  type        String   // virtual, physical
+  link        String?  // for virtual meetings
+  location    String?  // for physical meetings
+  scheduledAt DateTime
+  duration    Int?     // in minutes
+  status      String   @default("scheduled") // scheduled, ongoing, completed, cancelled
+  createdAt   DateTime @default(now())
+  createdBy   String
+  creator     User     @relation(fields: [createdBy], references: [id])
 }
 
 model Report {

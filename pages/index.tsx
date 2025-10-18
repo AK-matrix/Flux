@@ -55,8 +55,8 @@ export default function Home() {
       const params = new URLSearchParams()
       if (filter !== 'all') params.append('category', filter)
       
-      // Get Firebase token for authentication
-      const token = user ? 'mock-token' : null
+      // Get stored token for authentication
+      const token = localStorage.getItem('flux_token') || 'mock-token'
       const headers: HeadersInit = {}
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
@@ -94,15 +94,24 @@ export default function Home() {
 
   const handleJoinCommunity = async (communityId: string) => {
     try {
+      const token = localStorage.getItem('flux_token') || 'mock-token'
       const response = await fetch(`/api/communities/${communityId}/join`, {
-        method: 'POST'
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       })
       if (response.ok) {
         // Refresh posts to update community membership
         fetchPosts()
+        alert('Successfully joined community!')
+      } else {
+        const error = await response.json()
+        alert(error.error || 'Failed to join community')
       }
     } catch (error) {
       console.error('Failed to join community:', error)
+      alert('Failed to join community')
     }
   }
 
@@ -140,7 +149,7 @@ export default function Home() {
 
   const handleCreatePost = async (data: any) => {
     try {
-      const token = user ? 'mock-token' : null
+      const token = localStorage.getItem('flux_token') || 'mock-token'
       const headers: HeadersInit = { 'Content-Type': 'application/json' }
       if (token) {
         headers['Authorization'] = `Bearer ${token}`
@@ -177,7 +186,7 @@ export default function Home() {
             className="glass-card rounded-xl p-6 mb-6"
           >
             <h1 className="text-2xl font-bold text-white mb-2">
-              Flux — normalising talking to strangers
+              Flux
             </h1>
             <p className="text-gray-300 mb-4">
               Make real connections fast. Need someone in 20 mins? Post 'Instant'. 
