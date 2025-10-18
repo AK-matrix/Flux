@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  emailVerified  Boolean  @default(false)
+  displayName    String?
+  anonymousCode  String?  // e.g. FLX-7G3K if anonymous
+  interests      String[] // array of strings
+  year           String?
+  major          String?
+  creditScore    Float    @default(85)
+  isAnonymous    Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  posts          Post[]
+  comments       Comment[]
+  reportsMade    Report[] @relation("Reporter")
+  reportsAgainst Report[] @relation("Reported")
+  communities    Community[] @relation("Members")
+}
+
+model Post {
+  id             String   @id @default(cuid())
+  authorId       String
+  author         User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  title          String
+  description    String
+  category       String
+  tags           String[]
+  location       String?
+  timeStart      DateTime?
+  durationMins   Int?
+  maxPeople      Int?
+  urgency        String   // Instant / Today / Week / Longterm
+  isAnonymous    Boolean  @default(false)
+  isEphemeral    Boolean  @default(false)
+  ttlHours       Int?     // if ephemeral
+  createdAt      DateTime @default(now())
+  upvotes        Int      @default(0)
+  upvotedBy      String[] // array of user IDs who upvoted
+  comments       Comment[]
+  community      Community?
+  isCompleted    Boolean  @default(false)
+  reports        Report[]
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  content   String
+  parentId  String?  // for 2-level threading
+  parent    Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[] @relation("CommentReplies")
+  createdAt DateTime @default(now())
+}
+
+model Community {
+  id         String   @id @default(cuid())
+  postId     String   @unique
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  members    User[]   @relation("Members")
+  maxMembers Int?
+  createdAt  DateTime @default(now())
+  ttlHours   Int
+  isActive   Boolean  @default(true)
+}
+
+model Report {
+  id             String   @id @default(cuid())
+  reporterId     String
+  reporter       User     @relation("Reporter", fields: [reporterId], references: [id])
+  reportedUserId String
+  reportedUser   User     @relation("Reported", fields: [reportedUserId], references: [id])
+  postId         String?
+  post           Post?    @relation(fields: [postId], references: [id])
+  reason         String   // spam, abusive, scam, no-show, harassment
+  evidence       String?
+  status         String   @default("pending") // pending, dismissed, accepted
+  moderatorId    String?
+  moderatorNote  String?
+  createdAt      DateTime @default(now())
+  resolvedAt     DateTime?
+}
